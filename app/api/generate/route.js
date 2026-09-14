@@ -25,40 +25,29 @@ export async function POST(request) {
     const prompt = `A realistic photo of school stationery inventory on a desk at SMP Negeri 1 Poli-Polia. Items: ${inventory}. Placement note: ${position}. Professional realistic documentation photo.`;
 
     const openai = new OpenAI({ apiKey });
-    let response;
 
-    // Coba dall-e-3, jika akun Tier 0 otomatis fallback ke dall-e-2
-    try {
-      response = await openai.images.generate({
-        model: 'dall-e-3',
-        prompt: prompt,
-        n: 1,
-        size: '1024x1024',
-      });
-    } catch (err) {
-      if (err?.status === 400 || err?.message?.includes('does not exist')) {
-        response = await openai.images.generate({
-          model: 'dall-e-2',
-          prompt: prompt,
-          n: 1,
-          size: '1024x1024',
-        });
-      } else {
-        throw err;
-      }
-    }
+    const response = await openai.images.generate({
+      model: 'dall-e-3',
+      prompt: prompt,
+      n: 1,
+      size: '1024x1024',
+    });
 
     const imageUrl = response.data[0].url;
-
-    // Unduh gambar dari URL OpenAI lalu konversi ke Base64
     const imgRes = await fetch(imageUrl);
     const arrayBuffer = await imgRes.arrayBuffer();
     const base64Image = Buffer.from(arrayBuffer).toString('base64');
 
     return Response.json({ image: base64Image });
   } catch (error) {
+    if (error?.status === 400 && error?.message?.includes('does not exist')) {
+      return Response.json(
+        { error: 'Akun OpenAI belum memiliki saldo kredit aktif (minimal $5 prepaid). Silakan isi saldo di OpenAI Billing atau ganti ke mode "Dokumentasi Presisi ⭐".' },
+        { status: 400 }
+      );
+    }
     return Response.json(
-      { error: error?.message || 'Gagal membuat gambar AI dengan OpenAI.' },
+      { error: error?.message || 'Gagal membuat gambar dengan OpenAI.' },
       { status: 500 }
     );
   }
