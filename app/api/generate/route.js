@@ -25,14 +25,28 @@ export async function POST(request) {
     const prompt = `A realistic photo of school stationery inventory on a desk at SMP Negeri 1 Poli-Polia. Items: ${inventory}. Placement note: ${position}. Professional realistic documentation photo.`;
 
     const openai = new OpenAI({ apiKey });
+    let response;
 
-    // DALL-E 3 tanpa parameter response_format
-    const response = await openai.images.generate({
-      model: 'dall-e-3',
-      prompt: prompt,
-      n: 1,
-      size: '1024x1024',
-    });
+    // Coba dall-e-3, jika akun Tier 0 otomatis fallback ke dall-e-2
+    try {
+      response = await openai.images.generate({
+        model: 'dall-e-3',
+        prompt: prompt,
+        n: 1,
+        size: '1024x1024',
+      });
+    } catch (err) {
+      if (err?.status === 400 || err?.message?.includes('does not exist')) {
+        response = await openai.images.generate({
+          model: 'dall-e-2',
+          prompt: prompt,
+          n: 1,
+          size: '1024x1024',
+        });
+      } else {
+        throw err;
+      }
+    }
 
     const imageUrl = response.data[0].url;
 
