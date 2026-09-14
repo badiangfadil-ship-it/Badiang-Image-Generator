@@ -8,7 +8,7 @@ export async function POST(request) {
     const apiKey = process.env.OPENAI_API_KEY;
     if (!apiKey) {
       return Response.json(
-        { error: 'OPENAI_API_KEY belum dipasang di Vercel. Gunakan mode Dokumentasi Presisi.' },
+        { error: 'OPENAI_API_KEY belum dipasang di Vercel.' },
         { status: 500 }
       );
     }
@@ -25,15 +25,22 @@ export async function POST(request) {
     const prompt = `A realistic photo of school stationery inventory on a desk at SMP Negeri 1 Poli-Polia. Items: ${inventory}. Placement note: ${position}. Professional realistic documentation photo.`;
 
     const openai = new OpenAI({ apiKey });
+
+    // DALL-E 3 tanpa parameter response_format
     const response = await openai.images.generate({
       model: 'dall-e-3',
       prompt: prompt,
       n: 1,
       size: '1024x1024',
-      response_format: 'b64_json',
     });
 
-    const base64Image = response.data[0].b64_json;
+    const imageUrl = response.data[0].url;
+
+    // Unduh gambar dari URL OpenAI lalu konversi ke Base64
+    const imgRes = await fetch(imageUrl);
+    const arrayBuffer = await imgRes.arrayBuffer();
+    const base64Image = Buffer.from(arrayBuffer).toString('base64');
+
     return Response.json({ image: base64Image });
   } catch (error) {
     return Response.json(
